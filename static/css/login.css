@@ -1,0 +1,65 @@
+
+body{
+    overflow: hidden;
+}
+
+
+.preload {
+    
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+    width: 100%;
+    height: 100vh;
+}
+
+.preload-wrap{
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100%;
+    
+    background-color: #ca7d9f;
+
+}
+
+.main-container {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    align-items: flex-start;
+    justify-content: flex-end;
+    height: 100vh;
+    z-index: 1;
+    
+    
+}
+
+.boxsizer-horizontal-right{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    height: 100%;
+    margin-right:10vh;
+    backdrop-filter: invert(80%);
+    width: 30%;
+
+}
+
+.login-title{
+    margin-top:10vh;
+}
+
+.background{
+    background-image: url("../photos/avemujica.jpg");
+    background-size: cover ;
+    position: absolute;
+    width: 100%;
+    height:100vh;
+    
+    z-index: 0;
+}
