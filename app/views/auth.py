@@ -16,13 +16,13 @@ def login():
     - 速率限制
     - 验证码
     """
-    data = request.get_json()
+    form = request.form
     
-    if not data:
+    if not form:
         return jsonify({'error': '请求数据不能为空'}), 400
     
-    username = data.get('username')
-    password = data.get('password')
+    username = form.get('username')
+    password = form.get('password')
     
     if not username or not password:
         return jsonify({'error': '用户名和密码不能为空'}), 400

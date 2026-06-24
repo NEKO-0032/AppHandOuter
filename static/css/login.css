@@ -1,8 +1,27 @@
 
-body{
-    overflow: hidden;
+
+@font-face{
+    font-family: "3D";
+    src: url("../fonts/dotFont/FUN/BoutiqueBitmap9x9_3D.ttf");
+    font-weight: normal;
+    font-style: normal;
 }
 
+@font-face {
+    font-family: "black";
+    src: url("../fonts/black/Judou-Heavy.ttc");
+}
+
+@font-face {
+    font-family: "light-black";
+    src: url("../fonts/black/Judou-ExtraLight.ttc");
+}
+
+body{
+    overflow: hidden;
+    font-family: "black";
+
+}
 
 .preload {
     
@@ -49,9 +68,72 @@ body{
     width: 30%;
 
 }
+.login-form{
+    width: 100%;
+    
+
+    /*background-color:rgba(255,255,255,0.3) ;
+    border: 10px solid rgba(255,255,255,0.3);
+    border-radius: 12px;*/
+}
 
 .login-title{
     margin-top:10vh;
+    font-family: "black";
+    border-style:  dashed double /*none*/;
+    border-width: 5px;
+    border-color:black;
+    
+    padding-left: 22.5%;
+    padding-right: 22.5%;
+    background-color: rgba(137, 4, 4, 0.664);
+    color: rgba(0, 0, 0, 1);
+}
+
+.login-inputLine{
+    display: flex;
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-between;
+    margin-top: 10%;
+    
+
+}
+
+.login-inputLine label{
+    margin-left: 15%;
+    border-style: groove;
+    border-color: black;
+    background-color:rgba(137, 4, 4, 0.664) ;
+    padding: 1px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+.login-inputLine input{
+    margin-left: auto;
+    margin-right: 15%;
+    border-radius: 3px;
+    width: 40%;
+    background-color: rgba(137, 4, 4, 0.468);
+    backdrop-filter: blur(80px);
+    padding: 1px;
+    font-family: "light-black";
+    color: white;
+    
+}
+
+.login-submitLine{
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 10%;
+}
+
+.login-submitLine input{
+    margin-right: 15%;
+    width: 15%;
+    font-family: "black";
+    background-color:rgba(137, 4, 4, 0.664) ;
 }
 
 .background{
