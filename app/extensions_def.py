@@ -1,4 +1,5 @@
 import redis
+import mysql.connector
 
 
 # Redis 客户端实例（延迟初始化）
@@ -29,3 +30,12 @@ class RedisConnector:
         decode_responses=True  # 自动将 bytes 转换为字符串
     )
         
+
+class MysqlConnector:
+    def __init__(self,host,user,password,database):
+        self.db = mysql.connector.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database
+        )
