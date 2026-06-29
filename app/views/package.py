@@ -1,6 +1,5 @@
 from flask import Blueprint, jsonify
-from app.services.hardware_io import HardwareIO
-from app.extensions import RedisConnector
+from app.extentions_reali import hardwareController,redisClient
 
 """
 软件安装包相关接口
@@ -8,13 +7,6 @@ from app.extensions import RedisConnector
 """
 
 
-# 创建硬件资源调用实例
-hardwareController = HardwareIO()
-
-# 创建 Redis 连接实例
-redisConnector = RedisConnector('localhost', 6379, 0)
-redisConnector.init_redis()
-redisClient = redisConnector.client
 
 # 创建蓝图
 package_bp = Blueprint('package', __name__, url_prefix='/api')

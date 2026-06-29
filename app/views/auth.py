@@ -1,9 +1,16 @@
 from flask import Blueprint, jsonify, request
 import flask
+
 from werkzeug.security import generate_password_hash, check_password_hash
+from app.extentions_reali import mysqlConnector
 
 # 创建蓝图
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+#创建Mysql连接实例
+class AuthError(Exception):
+    pass
+
+
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -38,3 +45,24 @@ def login():
 @auth_bp.route("/login", methods=["GET"])
 def login_page_get():
     return flask.render_template("login.html")
+
+
+def signup_sql(username, password,permission="访客"):
+    """"
+    permission必须是锁定、访客、管理员、最高管理员之一
+    """
+
+    with mysqlConnector.get_cursor() as cursor:
+        if username and password:
+            sql = "INSERT INTO accounts (username, password_hash, permission) VALUES (%s, %s, %s)"
+            if len(password) > 70:
+                raise AuthError("The password is too long.")
+            cursor.execute(sql, (username, generate_password_hash(password), permission))
+            mysqlConnector.db.commit()
+
+
+
+
+if __name__ == "__main__":
+    signup_sql("test","wsfdexgfcdhrtjy","锁定")
+    print("done")
