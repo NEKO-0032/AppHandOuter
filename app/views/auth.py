@@ -48,7 +48,7 @@ def login_page_get():
     return flask.render_template("login.html")
 
 pattern_username = re.compile(r"^\w+$")
-pattern_password = re.compile(r"^[a-zA-Z0-9!@#$%&_-]{8-70}$")
+pattern_password = re.compile(r"^[a-zA-Z0-9!@#$%&_-]{8，70}$")
 
 def signup_sql(username:str, password:str,permission:str="访客") ->  dict[str,int|str]:
     """
