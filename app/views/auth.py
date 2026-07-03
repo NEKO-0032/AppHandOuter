@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify, request
-import flask
+import flask,re
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.extentions_reali import mysqlConnector
+import mysql.connector.errors as mysql_errors
 
 # 创建蓝图
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -46,23 +47,91 @@ def login():
 def login_page_get():
     return flask.render_template("login.html")
 
+pattern_username = re.compile(r"^\w+$")
+pattern_password = re.compile(r"^[a-zA-Z0-9!@#$%&_-]{8-70}$")
 
-def signup_sql(username, password,permission="访客"):
-    """"
+def signup_sql(username:str, password:str,permission:str="访客") ->  dict[str,int|str]:
+    """
     permission必须是锁定、访客、管理员、最高管理员之一
+
+    返回值格式（字典）：
+        {
+            "code": "0"（成功）/ "-1" / "-2"...（失败/报错）,
+            "msg": "提示语",
+            "ErrorDetails": "详细错误信息，无错误则不填"
+        }
     """
 
     with mysqlConnector.get_cursor() as cursor:
+
         if username and password:
             sql = "INSERT INTO accounts (username, password_hash, permission) VALUES (%s, %s, %s)"
-            if len(password) > 70:
-                raise AuthError("The password is too long.")
-            cursor.execute(sql, (username, generate_password_hash(password), permission))
-            mysqlConnector.db.commit()
+
+            """
+            输入过滤
+            """
+            if len(password) > 70 or len(username) < 8:
+                try:
+                    raise AuthError("TooLongPassword")
+                except AuthError as e:
+                    return {"code":-1,
+                            "msg":"你的密码长度不合法，应少于70个字符且大于20个字符",
+                            "ErrorDetails":"",}
+            if len(username) > 20:
+                try:
+                    raise AuthError("TooLongUsername")
+                except AuthError as e:
+                    return {"code":-2,
+                            "msg":"你的用户名太长了，应少于20个字符",
+                            "ErrorDetails":f"{e}"}
+
+            if pattern_username.fullmatch(username) is None:
+                try:
+                    raise AuthError("InvalidUsername")
+                except AuthError as e:
+                    return {"code":-3,
+                            "msg":"你的用户名包含非法字符",
+                            "ErrorDetails":f"{e}"}
+            if pattern_password.fullmatch(password) is None:
+                try:
+                    raise AuthError("InvalidPassword")
+                except AuthError as e:
+                    return {"code":-4,
+                            "msg":"你的密码不合法",
+                            "ErrorDetails":f"{e}"}
+
+
+
+
+
+            try:
+                cursor.execute(sql, (username, generate_password_hash(password), permission))
+                mysqlConnector.db.commit()
+
+            except mysql_errors.IntegrityError:
+                return {"code":-5,
+                        "msg":"此用户名已被使用",
+                        "ErrorDetails":"IntegrityError",}
+            except mysql_errors as e:
+                return {"code":1,
+                        "msg":f"未知错误{e}，请联系管理员寻求帮助",
+                        "ErrorDetails":f"{e}",}
+
+            return {"code":0,
+                    "msg":"注册成功",
+                    "ErrorDetails":"",}
+        else:
+            try:
+                raise AuthError("EmptyInput")
+            except AuthError as e:
+                return {"code":2,
+                        "msg":"请不要让名称或密码为空",
+                        "ErrorDetails":f"{e}"}
+
 
 
 
 
 if __name__ == "__main__":
-    signup_sql("test","wsfdexgfcdhrtjy","锁定")
+    signup_sql("IJNKLM<.bxwarfertgjygnatz5ujsztgiktjrdsghfrxedhtgitydfrxdfghjctrftgkijkfrdctgju","wsfdexgfcdhrtjy","锁定")
     print("done")
