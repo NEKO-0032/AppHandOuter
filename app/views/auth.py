@@ -29,6 +29,7 @@ class AuthController:
         - 验证码
         """
         form = request.form
+        data = request.get_data()
 
         if not form:
             return jsonify({'error': '请求数据不能为空'}), 400
@@ -40,15 +41,28 @@ class AuthController:
             return jsonify({'error': '用户名和密码不能为空'}), 400
 
         check_result = self.__username_password_check(username, password)
-        if check_result["code"] != 0:
+        if check_result["code"] != 0:#用户名或密码不合法，请重试
+            """
+            这里的html待完善
+            """
+
             return flask.render_template("login.html")
 
         # TODO: 实现真正的登录逻辑
         # 1. 从数据库查询用户
         # 2. 验证密码（使用 check_password_hash）
         # 3. 生成 JWT token
+        with mysqlConnector.get_cursor() as cursor:
+            sql = "SELECT password_hash FROM accounts WHERE username = %s"
+            cursor.execute(sql, (username,))
+            pwd_hash = cursor.fetchone()[0]
 
-        return jsonify({'message': '登录功能待实现', 'username': username}), 200
+            if check_password_hash(pwd_hash,password):
+                pass
+
+
+
+        return jsonify({"code":"0",'msg': '登录功能待实现', 'username': username})
 
     def login_page_get(self):
         return flask.render_template("login.html")

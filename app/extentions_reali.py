@@ -6,7 +6,7 @@ from app import Config
 hardwareController = HardwareIO()
 
 # 创建 Redis 连接实例
-redisConnector = RedisConnector(Config.REDIS_HOST, Config.MYSQL_PORT, Config.REDIS_DB)
+redisConnector = RedisConnector(Config.REDIS_HOST, Config.REDIS_PORT, Config.REDIS_DB)
 redisConnector.init_redis()
 redisClient = redisConnector.client
 
