@@ -51,7 +51,12 @@ async function API(url = "", method = "GET", data = null) {
 
 /**
  * 登录函数
- * 流程：收集表单 → POST 请求 → 读取 jwt cookie / 响应体 token → 存储 → 跳转
+ * 流程：收集表单 → POST 请求 → code 判断成败 → 存 token → 跳转
+ *
+ * 后端 JSON 规范（与 __username_password_check 一致）：
+ *   成功: {"code": 0, "token": "...", "msg": "..."}
+ *   失败: {"code": -1, "msg": "错误提示", "ErrorDetails": "..."}
+ *   code === 0 表示成功，code < 0 表示业务失败
  */
 async function login() {
     const username = document.getElementById("username").value.trim();
@@ -62,34 +67,30 @@ async function login() {
         return;
     }
 
-    // 构造 FormData（后端用 request.form 接收）
     const formData = new FormData();
     formData.append("username", username);
     formData.append("password", password);
 
     try {
         const response = await API("/api/auth/login", "POST", formData);
-
-        // 尝试从 cookie 中读 jwt token
+        const body = await response.json();
         const jwtFromCookie = getJwtFromCookie();
 
-        // 解析响应体
-        const body = await response.json();
-
-        if (response.ok) {
-            // 优先取 cookie 中的 token，其次取响应体中的
+        // 按后端规范：code === 0 为成功
+        if (body.code === 0 || body.code === "0") {
             const token = jwtFromCookie || body.token || body.access_token || null;
-
             if (token) {
                 localStorage.setItem("jwt_token", token);
                 console.log("JWT token 已存储~");
             }
-
-            // 跳转
             const redirectUrl = body.redirect || "/";
             window.location.href = redirectUrl;
         } else {
-            alert(body.error || body.msg || "登录失败，请重试");
+            // 业务失败：显示 msg，控制台打印 ErrorDetails
+            if (body.ErrorDetails) {
+                console.error("登录失败详情:", body.ErrorDetails);
+            }
+            alert(body.msg || body.error || "登录失败，请重试");
         }
     } catch (err) {
         console.error("登录请求异常:", err);
