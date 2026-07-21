@@ -1,44 +1,68 @@
-//import { gsap } from 'https://cdn.jsdelivr.net/npm/gsap@3.13.0/index.js';
+// ============================================================
+//  Lorian 登录页面 JS
+//  功能：登录 / Token 管理 / 自动刷新 / 受保护 API 调用示例
+// ============================================================
 
-//document.addEventListener('DOMContentLoaded', function() {
-    //const preload = document.querySelector('.preload');
-    //for(let i=0;i<80;i++){
-    //    const wrap = document.createElement('div');
-    //    wrap.style.height = `100vh`;
-    //    wrap.classList.add('preload-wrap');
-    //    preload.appendChild(wrap);
-    //    console.log("wrap:"+i);
+const TOKEN_KEY = "lorian_access_token";
+const REFRESH_KEY = "lorian_refresh_token";
+const USER_KEY = "lorian_user";
 
-    //}
 
-    //let tl = gsap.timeline();
-    
+// ============================================================
+//  Token 工具函数
+// ============================================================
 
-    //for(let i=0;i<80;i++){
-        
+function saveToken(accessToken, refreshToken, user) {
+    localStorage.setItem(TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_KEY, refreshToken);
+    if (user) {
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
+}
 
-    //}
-//});
+function getToken() {
+    return localStorage.getItem(TOKEN_KEY);
+}
 
+function getRefreshToken() {
+    return localStorage.getItem(REFRESH_KEY);
+}
+
+function clearToken() {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(USER_KEY);
+}
+
+
+// ============================================================
+//  通用 API 封装
+// ============================================================
 
 /**
- * 通用 API 请求封装
- * @param {string} url - 请求地址
- * @param {string} method - HTTP 方法 (GET/POST/PUT/DELETE)
- * @param {object} data - 请求体数据（对象或 FormData）
- * @returns {Promise<Response>} fetch 原始 Response
+ * @param {string} url      请求地址
+ * @param {string} method   GET/POST/PUT/DELETE
+ * @param {*}      data     FormData / 普通对象 / null
+ * @param {boolean} auth    是否自动附带 Authorization 头
+ * @returns {Promise<Response>}
  */
-async function API(url = "", method = "GET", data = null) {
+async function API(url = "", method = "GET", data = null, auth = false) {
     const options = {
         method: method,
-        credentials: "include",  // 允许携带/接收 cookie
+        credentials: "include",
         headers: {}
     };
+
+    if (auth) {
+        const token = getToken();
+        if (token) {
+            options.headers["Authorization"] = `Bearer ${token}`;
+        }
+    }
 
     if (method.toUpperCase() !== "GET" && data) {
         if (data instanceof FormData) {
             options.body = data;
-            // FormData 不设 Content-Type，浏览器自动带 boundary
         } else {
             options.headers["Content-Type"] = "application/json";
             options.body = JSON.stringify(data);
@@ -46,24 +70,72 @@ async function API(url = "", method = "GET", data = null) {
     }
 
     const response = await fetch(url, options);
+
+    // 自动刷新：如果返回 401 且不是 login 接口本身，尝试 refresh
+    if (response.status === 401 && auth && !url.endsWith('/login')) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+            // 重试原请求
+            options.headers["Authorization"] = `Bearer ${getToken()}`;
+            return fetch(url, options);
+        } else {
+            // 刷新失败，跳回登录页
+            clearToken();
+            window.location.href = '/api/auth/login';
+        }
+    }
+
     return response;
 }
 
 /**
- * 登录函数
- * 流程：收集表单 → POST 请求 → code 判断成败 → 存 token → 跳转
- *
- * 后端 JSON 规范（与 __username_password_check 一致）：
- *   成功: {"code": 0, "token": "...", "msg": "..."}
- *   失败: {"code": -1, "msg": "错误提示", "ErrorDetails": "..."}
- *   code === 0 表示成功，code < 0 表示业务失败
+ * 用 refresh_token 无感刷新 access_token
+ * @returns {boolean} 是否刷新成功
+ */
+async function tryRefreshToken() {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) return false;
+
+    try {
+        const res = await fetch("/api/auth/refresh", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${refreshToken}`,
+                "Content-Type": "application/json"
+            }
+        });
+        if (!res.ok) return false;
+
+        const body = await res.json();
+        if (body.code === 0 && body.access_token) {
+            localStorage.setItem(TOKEN_KEY, body.access_token);
+            return true;
+        }
+    } catch (e) {
+        console.error("Token 刷新失败:", e);
+    }
+    return false;
+}
+
+
+// ============================================================
+//  登录函数
+// ============================================================
+
+/**
+ * 登录
+ * 流程：收集表单 → POST → code 判断 → 存 token → 跳转
  */
 async function login() {
     const username = document.getElementById("username").value.trim();
     const password = document.getElementById("password").value.trim();
+    const errorEl = document.getElementById("login-error");
+
+    // 清空旧错误
+    if (errorEl) errorEl.textContent = "";
 
     if (!username || !password) {
-        alert("用户名和密码不能为空喵~");
+        showError("用户名和密码不能为空喵~");
         return;
     }
 
@@ -74,40 +146,68 @@ async function login() {
     try {
         const response = await API("/api/auth/login", "POST", formData);
         const body = await response.json();
-        const jwtFromCookie = getJwtFromCookie();
 
-        // 按后端规范：code === 0 为成功
-        if (body.code === 0 || body.code === "0") {
-            const token = jwtFromCookie || body.token || body.access_token || null;
-            if (token) {
-                localStorage.setItem("jwt_token", token);
-                console.log("JWT token 已存储~");
+        if (body.code === 0) {
+            // 存储 token（优先使用新的 access_token 字段，兼容旧版 token 字段）
+            const accessToken = body.access_token || body.token || null;
+            const refreshToken = body.refresh_token || null;
+            const user = body.user || null;
+
+            if (accessToken) {
+                saveToken(accessToken, refreshToken, user);
             }
+
             const redirectUrl = body.redirect || "/";
             window.location.href = redirectUrl;
         } else {
-            // 业务失败：显示 msg，控制台打印 ErrorDetails
-            if (body.ErrorDetails) {
-                console.error("登录失败详情:", body.ErrorDetails);
-            }
-            alert(body.msg || body.error || "登录失败，请重试");
+            showError(body.msg || "登录失败，请重试");
         }
     } catch (err) {
         console.error("登录请求异常:", err);
-        alert("网络错误，请稍后重试喵~");
+        showError("网络错误，请稍后重试喵~");
     }
 }
 
-/**
- * 从 document.cookie 中提取 jwt_token
- * @returns {string|null}
- */
-function getJwtFromCookie() {
-    const match = document.cookie.match(/(?:^|;\s*)jwt_token=([^;]*)/);
-    return match ? decodeURIComponent(match[1]) : null;
+function showError(msg) {
+    const errorEl = document.getElementById("login-error");
+    if (errorEl) {
+        errorEl.textContent = msg;
+        errorEl.style.display = "block";
+    } else {
+        alert(msg);
+    }
 }
 
-// ========== 绑定登录按钮 ==========
+
+// ============================================================
+//  注册示例（可选，登录页暂不用）
+// ============================================================
+
+async function register(username, password, permission = "访客") {
+    try {
+        const res = await API("/api/auth/register", "POST", {
+            username, password, permission
+        });
+        const body = await res.json();
+        if (body.code === 0) {
+            alert("注册成功，请登录~");
+            return true;
+        } else {
+            alert(body.msg || "注册失败");
+            return false;
+        }
+    } catch (e) {
+        console.error(e);
+        alert("网络错误");
+        return false;
+    }
+}
+
+
+// ============================================================
+//  绑定事件
+// ============================================================
+
 document.addEventListener("DOMContentLoaded", () => {
     const submitBtn = document.querySelector(".login-submitLine input[type='submit']");
     if (submitBtn) {
@@ -117,7 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 顺便支持回车登录
+    // 回车登录
     const passwordInput = document.getElementById("password");
     if (passwordInput) {
         passwordInput.addEventListener("keydown", (e) => {
@@ -127,4 +227,17 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    // 如果已登录，跳转首页
+    // if (getToken()) {
+    //     window.location.href = "/";
+    // }
 });
+
+
+// ============================================================
+//  导出（如果需要被其他模块引用，使用 ES module export）
+//  当前 login.html 使用 <script type="module">，可以 export
+// ============================================================
+
+export { API, getToken, clearToken, login, register, tryRefreshToken };
