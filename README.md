@@ -1,6 +1,6 @@
 # Lorian Backend Server
 
-落雨 App 后端服务 —— 提供安装包分发、用户认证、数据分析等核心能力。
+落雨 App 后端服务 —— 提供安装包分发、用户认证、数据仪表盘、数据分析等核心能力。
 
 ## 技术栈
 
@@ -11,7 +11,7 @@
 | 缓存 | Redis (连接池) |
 | 数据库 | MySQL (mysql-connector-python) |
 | 配置管理 | python-dotenv + 环境变量 |
-| 密码加密 | Werkzeug (`generate_password_hash` / `check_password_hash`) |
+| 密码加密 | Werkzeug |
 | 统计分析 | TalkingData (架构已就绪，待对接 SDK) |
 
 ## 项目结构
@@ -24,27 +24,24 @@ remoteServer/
 │   ├── extensions_def.py        # 扩展类定义（RedisConnector, MysqlConnector）
 │   ├── extentions_reali.py      # 扩展实例初始化
 │   ├── services/                # 服务层
-│   │   ├── __init__.py
-│   │   ├── hardware_io.py       # 硬件资源 I/O（读取安装包文件）
+│   │   ├── hardware_io.py       # 硬件资源 I/O
 │   │   └── analytics.py         # TalkingData 统计服务（架构桩）
 │   ├── utils/                   # 工具模块
-│   │   ├── __init__.py
-│   │   ├── jwt_utils.py         # JWT 管理器（生成/验证/刷新/异常处理）
-│   │   └── auth_required.py     # 认证装饰器（login_required / optional_login）
+│   │   ├── jwt_utils.py         # JWT 管理器
+│   │   └── auth_required.py     # 认证装饰器（login / permission_required）
 │   └── views/                   # 路由蓝图
-│       ├── __init__.py          # 蓝图导出
-│       ├── auth.py              # 认证蓝图（登录/注册/登出/Token刷新/用户信息）
-│       └── package.py           # 安装包蓝图（版本检查/下载）
+│       ├── auth.py              # 认证：登录/注册/登出/Token
+│       ├── dashboard.py         # 仪表盘：统计页/用户管理
+│       └── package.py           # 安装包：版本检查/下载
+├── docs/                        # 详细文档（数据规范 / API / 数据库）
+│   ├── data-spec.md             # 数据规范与实体定义
+│   ├── api-reference.md         # 接口文档
+│   └── database.md              # 数据库表结构与操作
 ├── static/                      # 静态资源
-│   ├── css/login.css            # 登录页样式
-│   ├── js/login.js              # 登录页逻辑（Token 管理/自动刷新）
-│   ├── fonts/                   # 自定义字体
-│   └── photos/                  # 图片资源
-├── templates/
-│   └── login.html               # 登录页面模板
+├── templates/                   # Jinja2 模板
 ├── run.py                       # 启动入口
 ├── requirements.txt             # Python 依赖
-└── README.md                    # 项目文档
+└── README.md                    # 本文件
 ```
 
 ## 快速开始
@@ -52,13 +49,8 @@ remoteServer/
 ### 1. 环境准备
 
 ```powershell
-# 创建虚拟环境
 python -m venv .venv
-
-# 激活
 .venv\Scripts\Activate.ps1
-
-# 安装依赖
 pip install -r requirements.txt
 ```
 
@@ -67,177 +59,106 @@ pip install -r requirements.txt
 在项目根目录创建 `.env` 文件：
 
 ```env
-# 密钥（不设置则自动生成随机密钥）
-SECRET_KEY=your_secret_key_here
-JWT_SECRET_KEY=your_jwt_secret_key_here
+SECRET_KEY=your_secret_key
+JWT_SECRET_KEY=your_jwt_secret_key
 
-# MySQL 数据库
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USER=root
 MYSQL_PASSWORD=your_password
-MYSQL_DATABASE=lorian
+MYSQL_DATABASE=lorian_backend
 
-# Redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_DB=0
 
-# 安装包存储路径
 BINARY_FILES_PATH=/path/to/packages
 
-# TalkingData（暂不启用）
 TALKINGDATA_APP_ID=
 TALKINGDATA_ENABLED=false
 ```
 
 ### 3. 数据库初始化
 
+详见 [docs/database.md](docs/database.md)。
+
 ```sql
 CREATE TABLE accounts (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(20) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    permission VARCHAR(20) DEFAULT '访客',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    username      VARCHAR(50)                              NOT NULL UNIQUE,
+    password_hash VARCHAR(256)                             NOT NULL,
+    permission    ENUM('最高管理员','管理员','访客','锁定')  DEFAULT NULL
 );
 ```
 
-### 4. 启动服务
+### 4. 测试账号
+
+> ⚠️ **仅限测试环境使用，生产环境请删除或修改密码！**
+
+| 用户名 | 密码 | 权限 |
+|--------|------|------|
+| `test` | `wsfdexgfcdhrtjy` | 锁定 |
+| `local_admin` | `114514AAA` | 最高管理员 |
+
+预置脚本：见 [docs/database.md](docs/database.md) 底部。
+
+### 5. 启动服务
 
 ```bash
+redos-server.exe redis.conf
+
 python run.py
 ```
 
-访问 http://localhost:5000/api/auth/login 进入登录页。
+- 登录页：http://localhost:5000/api/auth/login
+- 仪表盘：http://localhost:5000/api/dashboard（需登录）
 
-## API 文档
+## 文档索引
 
-### 认证模块 (`/api/auth`)
-
-所有接口统一返回格式：
-
-```json
-// 成功
-{"code": 0, "msg": "...", "...": "..."}
-
-// 失败
-{"code": <负数>, "msg": "错误提示", "ErrorDetails": "..."}
-```
-
-| 方法 | 路径 | 认证 | 说明 |
-|------|------|------|------|
-| GET | `/api/auth/login` | 无 | 登录页面 |
-| POST | `/api/auth/login` | 无 | 登录 (FormData: username, password) |
-| POST | `/api/auth/register` | 无 | 注册 (JSON: {username, password, permission?}) |
-| POST | `/api/auth/logout` | 可选 | 登出（前端丢弃 token） |
-| GET | `/api/auth/me` | Bearer Token | 获取当前用户信息 |
-| POST | `/api/auth/refresh` | Refresh Token | 刷新 Access Token |
-
-### 安装包模块 (`/api`)
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/getLatestPackage` | 获取最新安装包信息 |
-
----
-
-## JWT 认证流程
-
-```
-  ┌─────────┐                            ┌──────────┐
-  │ 前端     │                            │ 后端      │
-  │ (JS)    │                            │ (Flask)  │
-  └────┬────┘                            └────┬─────┘
-       │  POST /api/auth/login                 │
-       │  {username, password}                 │
-       │─────────────────────────────────────▶ │
-       │                                       │ 验证密码
-       │                                       │ 生成 token pair
-       │  {access_token, refresh_token, user}  │
-       │◀───────────────────────────────────── │
-       │                                       │
-       │  存储到 localStorage                  │
-       │                                       │
-       │  后续请求                              │
-       │  Authorization: Bearer <access_token> │
-       │─────────────────────────────────────▶ │
-       │                                       │ JWT 验证
-       │  {code:0, data:...}                   │
-       │◀───────────────────────────────────── │
-       │                                       │
-       │  401 时自动用 refresh_token 换新      │
-       │  POST /api/auth/refresh               │
-       │  Authorization: Bearer <refresh_token>│
-       │─────────────────────────────────────▶ │
-       │  {access_token}                       │
-       │◀───────────────────────────────────── │
-```
-
-- **Access Token**: 30 分钟有效期，用于 API 鉴权
-- **Refresh Token**: 7 天有效期，用于无感刷新 Access Token
-- 前端在 401 响应时自动尝试刷新，失败则跳回登录页
-
-### 保护 API 路由示例
-
-```python
-from app.utils import login_required
-
-@auth_bp.route('/me', methods=['GET'])
-@login_required
-def get_user_info():
-    from flask import g
-    return jsonify({"username": g.current_user})
-```
-
----
-
-## code 编码表
-
-| code | 含义 |
+| 文档 | 内容 |
 |------|------|
-| 0 | 成功 |
-| -1 | 密码长度不合法 |
-| -2 | 用户名过长 |
-| -3 | 用户名含非法字符 |
-| -4 | 密码格式不合法 |
-| -5 | 用户名已存在 |
-| -6 | 请求数据为空 |
-| -7 | 用户名或密码为空 |
-| -8 | 用户不存在 |
-| -9 | 密码错误 |
-| -10 | Token 过期 |
-| -11 | Token 无效 |
-| -12 | 缺少 Token |
-| -13 | 无效的权限值 |
+| [docs/data-spec.md](docs/data-spec.md) | JSON 响应规范 / 实体定义 / Token 格式 / code 编码表 |
+| [docs/api-reference.md](docs/api-reference.md) | 全部 API 接口：认证 / 安装包 / 仪表盘 |
+| [docs/database.md](docs/database.md) | 数据库表结构 / 连接配置 / 常用操作 |
 
-## TalkingData 统计架构
+## API 概览
 
-统计模块采用事件驱动 + 批量上报的设计，当前为**桩实现**（仅打日志），后续接入 SDK 时只需修改 `app/services/analytics.py` 中的 `_send()` 方法。
+| 模块 | 路径 | 关键接口 |
+|------|------|---------|
+| 认证 | `/api/auth` | login / register / logout / me / refresh |
+| 仪表盘 | `/api/dashboard` | stats / updates / announcements / accounts |
+| 安装包 | `/api` | getLatestPackage |
 
-**事件类型**:
+详细参数与响应格式见 [docs/api-reference.md](docs/api-reference.md)。
 
-| 事件名 | 触发时机 |
-|--------|---------|
-| `auth_login` | 登录成功 |
-| `auth_login_failed` | 登录失败 |
-| `auth_register` | 注册成功 |
-| `auth_logout` | 登出 |
-| `package_download` | 安装包下载 |
-| `package_check` | 版本检查 |
+## 认证设计
 
-**启用方式**:
+- **Access Token**：30 分钟，API 鉴权
+- **Refresh Token**：7 天，无感刷新
+- 权限层级：锁定 < 访客 < 管理员 < 最高管理员
+- 使用 `@login_required` / `@permission_required("管理员")` 保护路由
+
+## 安全模型
+
+四层防线防止未授权账号创建和敏感操作：
+
+```
+  Layer 1  IP 白名单        ADMIN_IP_WHITELIST    只允许指定 IP 访问敏感路由
+  Layer 2  注册开关         ALLOW_PUBLIC_REGISTER  生产环境关闭公开注册
+  Layer 3  JWT 令牌认证      @permission_required   需管理员权限
+  Layer 4  Admin Secret     X-Admin-Secret Header  脚本后门（需配 IP 白名单）
+```
+
+配置示例（`.env`）:
 
 ```env
-TALKINGDATA_ENABLED=true
-TALKINGDATA_APP_ID=your_td_app_id
+# 生产环境安全配置
+ALLOW_PUBLIC_REGISTER=false                  # 关闭公开注册
+ADMIN_IP_WHITELIST=192.168.1.0/24,10.0.0.1  # 仅内网可管理账号
+ADMIN_SECRET_KEY=your_64_char_random_string  # CI/CD 后门密钥
 ```
 
-**后续对接步骤**:
-
-1. `pip install talkingdata-sdk` (或其他官方 SDK)
-2. 修改 `AnalyticsService._send()` 批量上报逻辑
-3. 前端集成 TalkingData JS SDK，采集页面浏览、点击流
+详见 [`.env.example`](.env.example) 和 [app/utils/security.py](app/utils/security.py)。
 
 ## Todo List
 
@@ -246,13 +167,14 @@ TALKINGDATA_APP_ID=your_td_app_id
 - [x] MySQL 连接
 - [x] JWT 认证（Access + Refresh Token）
 - [x] 登录 / 注册 / 登出 / Token 刷新 / 用户信息 API
-- [x] 前端 Token 管理 + 自动刷新 + 错误提示
-- [x] 认证装饰器（@login_required / @optional_login）
+- [x] 仪表盘页面 + 统计接口
+- [x] 前端 Token 管理 + 自动刷新
+- [x] 认证装饰器（@login_required / @permission_required）
 - [x] TalkingData 统计架构（桩实现）
 - [ ] TalkingData SDK 正式接入
-- [ ] 速率限制（登录/注册接口）
+- [ ] 仪表盘数据源对接（MySQL / Redis 实时查询）
+- [ ] 速率限制
 - [ ] 验证码对接
-- [ ] Gunicorn 生产部署配置
+- [ ] Gunicorn 生产部署
 - [ ] 安装包下载 API
 - [ ] 设备管理 API
-- [ ] 用户权限管理后台

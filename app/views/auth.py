@@ -7,21 +7,11 @@ JSON 响应规范（统一）：
 
 code 编码表:
     0    成功
-    -1   密码长度不合法
-    -2   用户名太长
-    -3   用户名含非法字符
-    -4   密码不合法
-    -5   用户名已存在
-    -6   请求数据为空
-    -7   用户名或密码为空
-    -8   用户不存在
-    -9   密码错误
-    -10  Token 过期
-    -11  Token 无效
-    -12  缺少 Token
+    ...
+    -403  IP 不在白名单 / 公开注册已关闭
 """
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import re
@@ -29,6 +19,7 @@ import time
 
 from app.extentions_reali import mysqlConnector
 from app.utils import JWTManager, login_required
+from app.utils.security import disable_public_register, ip_whitelist
 from app.services.analytics import analytics
 import mysql.connector.errors as mysql_errors
 
@@ -36,7 +27,7 @@ import mysql.connector.errors as mysql_errors
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 # ---- 预编译正则 ----
-PATTERN_USERNAME = re.compile(r"^\w{1,20}$")
+PATTERN_USERNAME = re.compile(r"^\w{1,50}$")
 PATTERN_PASSWORD = re.compile(r"^[a-zA-Z0-9!@#$%&_-]{8,70}$")
 
 
@@ -120,10 +111,20 @@ class AuthController:
     def register(self):
         """
         POST /api/auth/register
-        请求体 (JSON): {"username":"...", "password":"...", "permission":"访客"}
-        permission 可选，默认为 "访客"
-          可选: 锁定、访客、管理员、最高管理员
+        Content-Type: application/json
+
+        = 安全策略 =
+        1. 生产环境通过 ALLOW_PUBLIC_REGISTER=false 关闭公开注册
+        2. 关闭后账号只能由管理员通过 Dashboard 创建
+        3. 开发环境默认开放
+
+        请求体: {"username":"...", "password":"...", "permission":"访客"}
         """
+        # 检查公开注册是否开启
+        blocked = disable_public_register()
+        if blocked:
+            return blocked
+
         data = request.get_json(silent=True) or {}
         username = (data.get('username') or '').strip()
         password = data.get('password') or ''
@@ -224,8 +225,8 @@ def _check_credentials(username: str, password: str) -> dict:
     """
     if len(password) > 70:
         return {"code": -1, "msg": "密码长度不合法（应 ≤ 70）", "ErrorDetails": ""}
-    if len(username) > 20:
-        return {"code": -2, "msg": "用户名过长（应 ≤ 20）", "ErrorDetails": ""}
+    if len(username) > 50:
+        return {"code": -2, "msg": "用户名过长（应 ≤ 50）", "ErrorDetails": ""}
     if PATTERN_USERNAME.fullmatch(username) is None:
         return {"code": -3, "msg": "用户名包含非法字符", "ErrorDetails": ""}
     if PATTERN_PASSWORD.fullmatch(password) is None:

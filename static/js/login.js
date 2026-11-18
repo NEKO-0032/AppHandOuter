@@ -157,7 +157,7 @@ async function login() {
                 saveToken(accessToken, refreshToken, user);
             }
 
-            const redirectUrl = body.redirect || "/";
+            const redirectUrl = body.redirect || "/api/dashboard";
             window.location.href = redirectUrl;
         } else {
             showError(body.msg || "登录失败，请重试");
@@ -233,11 +233,3 @@ document.addEventListener("DOMContentLoaded", () => {
     //     window.location.href = "/";
     // }
 });
-
-
-// ============================================================
-//  导出（如果需要被其他模块引用，使用 ES module export）
-//  当前 login.html 使用 <script type="module">，可以 export
-// ============================================================
-
-export { API, getToken, clearToken, login, register, tryRefreshToken };

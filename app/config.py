@@ -12,8 +12,8 @@ class Config:
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', secrets.token_hex(32))
 
     # JWT 配置
-    JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv('JWT_ACCESS_EXPIRE_MINUTES', 30))  # access token 30 分钟
-    JWT_REFRESH_TOKEN_EXPIRES = int(os.getenv('JWT_REFRESH_EXPIRE_DAYS', 7))    # refresh token 7 天
+    JWT_ACCESS_TOKEN_EXPIRES = int(os.getenv('JWT_ACCESS_EXPIRE_MINUTES', 30)) * 60  # access token 30 分钟（秒）
+    JWT_REFRESH_TOKEN_EXPIRES = int(os.getenv('JWT_REFRESH_EXPIRE_DAYS', 7)) * 86400  # refresh token 7 天（秒）
     JWT_TOKEN_LOCATION = ['headers', 'cookies']       # 同时支持 Header 和 Cookie
     JWT_COOKIE_SECURE = os.getenv('JWT_COOKIE_SECURE', 'false').lower() == 'true'
     JWT_COOKIE_SAMESITE = 'Lax'
@@ -37,4 +37,13 @@ class Config:
     # TalkingData 统计配置
     TALKINGDATA_APP_ID = os.getenv('TALKINGDATA_APP_ID', '')
     TALKINGDATA_ENABLED = os.getenv('TALKINGDATA_ENABLED', 'false').lower() == 'true'
+
+    # ======== 安全配置 ========
+    # 公开注册开关：生产环境建议设为 false，仅通过 Dashboard 由管理员创建账号
+    ALLOW_PUBLIC_REGISTER = os.getenv('ALLOW_PUBLIC_REGISTER', 'true').lower() == 'true'
+    # IP 白名单（逗号分隔，支持 CIDR）：为空则不限制
+    # 示例: "192.168.1.0/24,10.0.0.1,127.0.0.1"
+    ADMIN_IP_WHITELIST = os.getenv('ADMIN_IP_WHITELIST', '')
+    # Admin 后门密钥：用于脚本绕过 JWT（配合 IP 白名单使用）
+    ADMIN_SECRET_KEY = os.getenv('ADMIN_SECRET_KEY', '')
 

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仪表盘 - Lorian</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <span class="topbar-brand">Lorian Dashboard</span>
+        <nav class="topbar-tabs">
+            <button class="tab-btn active" data-tab="stats">数据看板</button>
+            <button class="tab-btn" data-tab="updates" id="tab-updates">更新管理</button>
+            <button class="tab-btn" data-tab="announce" id="tab-announce">公告管理</button>
+            <button class="tab-btn" data-tab="accounts" id="tab-accounts">账号管理</button>
+        </nav>
+        <div class="topbar-right">
+            <span id="user-display">未登录</span>
+            <button id="btn-logout">登出</button>
+        </div>
+    </header>
+
+    <main class="main-content">
+
+        <!-- 1. 数据看板 -->
+        <section class="tab-panel" id="panel-stats">
+            <div class="stats-row">
+                <div class="stat-card"><span class="stat-label">总设备数</span><span class="stat-value" id="v-devices">--</span></div>
+                <div class="stat-card"><span class="stat-label">今日活跃</span><span class="stat-value" id="v-active">--</span></div>
+                <div class="stat-card"><span class="stat-label">下载总数</span><span class="stat-value" id="v-downloads">--</span></div>
+                <div class="stat-card"><span class="stat-label">在线设备</span><span class="stat-value" id="v-online">--</span></div>
+                <div class="stat-card"><span class="stat-label">最新版本</span><span class="stat-value" id="v-version">--</span></div>
+            </div>
+        </section>
+
+        <!-- 2. 更新管理 -->
+        <section class="tab-panel" id="panel-updates" style="display:none">
+            <div class="toolbar">
+                <input type="file" id="upload-file" accept=".apk,.zip">
+                <button onclick="uploadPackage()">上传安装包</button>
+                <button onclick="pushUpdate()">推送更新</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="updates-table">
+                    <thead><tr><th>文件名</th><th>版本</th><th>大小</th><th>上传时间</th><th>上传者</th><th>状态</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 3. 公告管理 -->
+        <section class="tab-panel" id="panel-announce" style="display:none">
+            <div class="toolbar">
+                <button onclick="createAnn()">新建公告</button>
+            </div>
+            <div id="announce-list"></div>
+        </section>
+
+        <!-- 4. 账号管理 -->
+        <section class="tab-panel" id="panel-accounts" style="display:none">
+            <div class="toolbar">
+                <button onclick="createUser()">新建账号</button>
+            </div>
+            <div class="table-wrapper">
+                <table id="accounts-table">
+                    <thead><tr><th>ID</th><th>用户名</th><th>权限</th><th>操作</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="footer">Lorian &copy; 2025 | TalkingData 已就绪</footer>
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

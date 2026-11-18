@@ -1,0 +1,134 @@
+/* ============================================================
+   Lorian Dashboard — 4 模块 Tab 式布局
+   ============================================================ */
+
+:root {
+    --bg-primary:   #0f1117;
+    --bg-card:      #1a1d27;
+    --bg-hover:     #222533;
+    --text-primary: #e4e6eb;
+    --text-muted:   #8b8d97;
+    --accent:       #6366f1;
+    --accent-dim:   #4f46e5;
+    --danger:       #ef4444;
+    --success:      #22c55e;
+    --border:       #2a2d3a;
+    --radius:       8px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+    font-family: "Segoe UI","Microsoft YaHei",sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height:100vh;
+    display:flex; flex-direction:column;
+}
+
+/* ---- 顶栏 ---- */
+.topbar {
+    display:flex; align-items:center;
+    background:var(--bg-card);
+    border-bottom:1px solid var(--border);
+    padding:0 20px; height:56px;
+}
+.topbar-brand {
+    font-weight:700; font-size:1.1rem;
+    color:var(--accent);
+    margin-right:24px; white-space:nowrap;
+}
+.topbar-tabs {
+    display:flex; gap:4px; flex:1;
+}
+.tab-btn {
+    background:transparent; border:none; color:var(--text-muted);
+    padding:8px 18px; font-size:0.9rem; cursor:pointer;
+    border-radius:var(--radius); transition:0.15s;
+}
+.tab-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
+.tab-btn.active { background:var(--accent); color:#fff; }
+.topbar-right {
+    display:flex; align-items:center; gap:12px; font-size:0.85rem;
+    color:var(--text-muted); white-space:nowrap;
+}
+#btn-logout {
+    background:transparent; border:1px solid var(--danger);
+    color:var(--danger); padding:4px 12px; border-radius:var(--radius);
+    cursor:pointer; font-size:0.8rem; transition:0.15s;
+}
+#btn-logout:hover { background:var(--danger); color:#fff; }
+
+/* ---- 主体 ---- */
+.main-content {
+    flex:1; max-width:1200px; width:100%;
+    margin:0 auto; padding:24px 20px;
+}
+.tab-panel { display:block; }
+
+/* ---- 统计卡片 ---- */
+.stats-row {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px,1fr));
+    gap:14px;
+}
+.stat-card {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:18px 20px;
+    display:flex; flex-direction:column; gap:6px;
+}
+.stat-label { color:var(--text-muted); font-size:0.82rem; }
+.stat-value { font-size:1.9rem; font-weight:700; color:var(--accent); }
+
+/* ---- 工具栏 ---- */
+.toolbar {
+    display:flex; gap:10px; align-items:center;
+    margin-bottom:16px; flex-wrap:wrap;
+}
+.toolbar button, .toolbar input[type=file] {
+    padding:7px 16px; border-radius:var(--radius);
+    font-size:0.85rem; cursor:pointer;
+}
+.toolbar button {
+    background:var(--accent); color:#fff; border:none;
+}
+.toolbar button:hover { background:var(--accent-dim); }
+.toolbar button.danger { background:var(--danger); }
+.toolbar button.danger:hover { background:#dc2626; }
+
+/* ---- 表格 ---- */
+.table-wrapper { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+thead th { text-align:left; color:var(--text-muted); font-weight:500;
+    padding:8px 12px; border-bottom:1px solid var(--border); }
+tbody td { padding:8px 12px; border-bottom:1px solid rgba(42,45,58,.4); }
+tbody tr:hover { background:var(--bg-hover); }
+td.placeholder, div.placeholder { text-align:center; color:var(--text-muted); padding:32px; }
+
+/* ---- 公告卡片 ---- */
+.card-row {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:14px 18px; margin-bottom:10px;
+}
+.card-row .badge {
+    display:inline-block; font-size:0.75rem; padding:2px 8px;
+    border-radius:4px; margin-left:8px;
+    background:var(--success); color:#000;
+}
+.card-row .muted { color:var(--text-muted); font-size:0.85rem; margin-top:6px; }
+.card-row .actions { margin-top:8px; display:flex; gap:8px; }
+.card-row .actions button {
+    padding:4px 14px; border-radius:var(--radius); font-size:0.8rem;
+    border:1px solid var(--border); background:transparent; color:var(--text-muted);
+    cursor:pointer; transition:0.15s;
+}
+.card-row .actions button:hover { background:var(--bg-hover); color:var(--text-primary); }
+.card-row .actions button.danger { border-color:var(--danger); color:var(--danger); }
+.card-row .actions button.danger:hover { background:var(--danger); color:#fff; }
+
+/* ---- 底栏 ---- */
+.footer {
+    text-align:center; color:var(--text-muted);
+    font-size:0.78rem; padding:12px 0;
+    border-top:1px solid var(--border);
+}

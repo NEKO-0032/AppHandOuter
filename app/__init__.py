@@ -1,7 +1,7 @@
 from flask import Flask
 from app.config import Config
 import os
-from app.views import package_bp, auth_bp
+from app.views import package_bp, auth_bp, dashboard_bp, events_bp
 from app.utils import JWTManager
 from app.services.analytics import analytics
 
@@ -31,5 +31,7 @@ def create_app(config_class=Config):
     # 注册蓝图
     app.register_blueprint(package_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(dashboard_bp)
+    app.register_blueprint(events_bp)
 
     return app

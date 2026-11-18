@@ -1,33 +1,38 @@
-from flask import Blueprint, jsonify
-from app.extentions_reali import hardwareController,redisClient
-
 """
-软件安装包相关接口
+安装包蓝图 — 版本检查 / 下载
 
+已重构: 核心逻辑移入 app.services.package_service.PackageService
 """
 
+from flask import Blueprint, jsonify, send_from_directory, current_app
+from app.extentions_reali import hardwareController, redisClient
+from app.services.package_service import PackageService
 
-
-# 创建蓝图
 package_bp = Blueprint('package', __name__, url_prefix='/api')
 
 
-def update_latest_package():
-    """更新最新安装包信息到 Redis"""
-    latest_file_name, latest_version_list = hardwareController.readLatestFile("落雨")
-    print(latest_file_name, latest_version_list)
-    # 转换为字符串
-    latest_version_str = ".".join(map(str, latest_version_list))
-
-    redisClient.set('latest_luorian_package', latest_file_name, ex=24 * 3600)  # 最新安装包文件名
-    redisClient.set('latest_luorian_package_version', latest_version_str, ex=24 * 3600)  # 最新安装包版本号
+def sync_and_get_latest():
+    """返回最新版本信息"""
+    synced = PackageService.sync_from_disk()
+    latest = PackageService.get_latest()
+    return latest
 
 
 @package_bp.route('/getLatestPackage', methods=['GET'])
 def get_latest_package():
-    """获取最新安装包信息"""
-    update_latest_package()
+    """获取最新安装包信息（兼容旧接口）"""
+    latest = PackageService.get_latest()
+    if not latest:
+        return {"latest_package": None, "latest_version": "0.0.0"}
+
     return {
-        'latest_package': redisClient.get('latest_luorian_package'),
-        'latest_version': redisClient.get('latest_luorian_package_version')
+        "latest_package": latest["filename"],
+        "latest_version": latest["version"]
     }
+
+
+@package_bp.route('/download/<filename>', methods=['GET'])
+def download_package(filename):
+    """下载指定安装包"""
+    storage = PackageService.get_storage_dir()
+    return send_from_directory(storage, filename, as_attachment=True)
